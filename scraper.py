@@ -202,8 +202,11 @@ class AndesScraper:
             return f"{self.base_url}/{img_src}"
     
     def _is_imagem_valida(self, img_src: str) -> bool:
-        """Verifica se é uma imagem válida (não é ícone ou logo)"""
-        invalid_terms = ['icon', 'logo', 'banner', 'avatar', 'sprite']
+        """Verifica se é uma imagem válida (não é ícone ou logo) - versão melhorada"""
+        # Termos que indicam imagens não relevantes para o conteúdo
+        invalid_terms = ['icon', 'logo', 'avatar', 'sprite']
+        # Removemos 'banner' da lista pois pode ser imagem legítima do conteúdo
+        
         valid_extensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
         
         # Verificar se tem extensão válida
@@ -212,7 +215,13 @@ class AndesScraper:
         # Verificar se não contém termos inválidos
         has_invalid_terms = any(term in img_src.lower() for term in invalid_terms)
         
-        return has_valid_extension and not has_invalid_terms and not img_src.endswith('.svg')
+        # Verificar se não é SVG
+        is_svg = img_src.endswith('.svg')
+        
+        # Verificar se não é muito pequena (possível ícone)
+        is_small_icon = any(size in img_src.lower() for size in ['16x16', '32x32', '24x24'])
+        
+        return has_valid_extension and not has_invalid_terms and not is_svg and not is_small_icon
     
     def _verificar_imagem_acessivel(self, img_url: str) -> bool:
         """Verifica se a imagem é realmente acessível"""
