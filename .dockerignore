@@ -1,0 +1,39 @@
+# Ignorar cache do Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Ignorar arquivos de ambiente virtual
+venv/
+env/
+ENV/
+
+# Ignorar arquivos do Git
+.git/
+.gitignore
+
+# Ignorar arquivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignorar arquivos de log
+*.log
+
+# Ignorar arquivos temporários
+.tmp/
+temp/
+
+# Ignorar arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Ignorar README e documentação para reduzir tamanho da imagem
+README.md
+*.md
+
+# Ignorar arquivos de configuração local
+.env.local
+.env.development
