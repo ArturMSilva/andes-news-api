@@ -4,7 +4,6 @@ from datetime import datetime
 
 
 class NoticiaModel(BaseModel):
-    """Modelo de dados para uma notícia"""
     numero: int
     titulo: str
     resumo: str
@@ -15,7 +14,6 @@ class NoticiaModel(BaseModel):
 
 
 class NoticiaResponse(BaseModel):
-    """Resposta da API com lista de notícias"""
     total_noticias: int
     dados_extraidos: List[str]
     noticias: List[NoticiaModel]
@@ -23,7 +21,6 @@ class NoticiaResponse(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    """Resposta de erro padrão"""
     erro: str
     mensagem: str
     timestamp: str
