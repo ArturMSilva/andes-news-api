@@ -1,8 +1,3 @@
-"""
-Sistema de cache para a ANDES News API
-Implementa cache em memória com TTL para melhorar performance
-"""
-
 import json
 import hashlib
 from datetime import datetime, timedelta
@@ -13,18 +8,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 class NewsCache:
-    """
-    Sistema de cache para notícias com TTL (Time To Live)
-    """
     
     def __init__(self, max_size: int = 100, ttl_seconds: int = 900):
-        """
-        Inicializa o cache
-        
-        Args:
-            max_size: Número máximo de entradas no cache
-            ttl_seconds: Tempo de vida do cache em segundos (padrão: 15 minutos)
-        """
         self.cache = TTLCache(maxsize=max_size, ttl=ttl_seconds)
         self.ttl_seconds = ttl_seconds
         self.stats = {
@@ -35,29 +20,10 @@ class NewsCache:
         logger.info(f"Cache inicializado: max_size={max_size}, ttl={ttl_seconds}s")
     
     def _generate_cache_key(self, max_noticias: int) -> str:
-        """
-        Gera uma chave única para o cache baseada nos parâmetros
-        
-        Args:
-            max_noticias: Número de notícias solicitadas
-            
-        Returns:
-            Chave única para o cache
-        """
-        # Usar hash para garantir chave única e consistente
         key_data = f"noticias:{max_noticias}"
         return hashlib.md5(key_data.encode()).hexdigest()
     
     def get(self, max_noticias: int) -> Optional[Dict[str, Any]]:
-        """
-        Recupera dados do cache se disponível
-        
-        Args:
-            max_noticias: Número de notícias solicitadas
-            
-        Returns:
-            Dados do cache ou None se não encontrado/expirado
-        """
         self.stats["total_requests"] += 1
         cache_key = self._generate_cache_key(max_noticias)
         
@@ -77,17 +43,9 @@ class NewsCache:
             return None
     
     def set(self, max_noticias: int, data: Dict[str, Any]) -> None:
-        """
-        Armazena dados no cache
-        
-        Args:
-            max_noticias: Número de notícias
-            data: Dados para armazenar
-        """
         cache_key = self._generate_cache_key(max_noticias)
         
         try:
-            # Adicionar timestamp para debug
             data_with_cache_info = {
                 **data,
                 "cache_info": {
@@ -104,17 +62,10 @@ class NewsCache:
             logger.error(f"Erro ao armazenar no cache: {e}")
     
     def clear(self) -> None:
-        """Limpa todo o cache"""
         self.cache.clear()
         logger.info("Cache limpo manualmente")
     
     def get_stats(self) -> Dict[str, Any]:
-        """
-        Retorna estatísticas do cache
-        
-        Returns:
-            Dicionário com estatísticas de uso do cache
-        """
         total_requests = self.stats["total_requests"]
         hit_rate = (self.stats["hits"] / total_requests * 100) if total_requests > 0 else 0
         
@@ -130,12 +81,6 @@ class NewsCache:
         }
     
     def get_cache_info(self) -> Dict[str, Any]:
-        """
-        Retorna informações detalhadas sobre entradas do cache
-        
-        Returns:
-            Informações sobre as entradas atuais no cache
-        """
         cache_entries = []
         current_time = datetime.now()
         
@@ -159,12 +104,6 @@ class NewsCache:
         }
     
     def clear_cache(self) -> Dict[str, Any]:
-        """
-        Limpa todo o cache
-        
-        Returns:
-            Informações sobre a operação de limpeza
-        """
         entries_before = len(self.cache)
         self.cache.clear()
         logger.info("Cache limpo manualmente")
@@ -176,6 +115,4 @@ class NewsCache:
             "cleared_at": datetime.now().isoformat()
         }
 
-# Instância global do cache
-# TTL de 15 minutos (900 segundos) - balanceio entre performance e atualização
 news_cache = NewsCache(max_size=50, ttl_seconds=900)
