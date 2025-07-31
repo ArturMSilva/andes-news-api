@@ -365,6 +365,8 @@ class AndesScraper:
         
         titulo = re.sub(r'\s+', ' ', titulo).strip()
         
+        titulo = re.sub(r'^\d{1,2}\s+de\s+\w+\s+de\s+\d{4}\s*', '', titulo).strip()
+        
         for cat in self.categorias_conhecidas:
             if titulo.startswith(cat):
                 titulo = titulo[len(cat):].strip()
@@ -385,11 +387,16 @@ class AndesScraper:
                         title_elem = soup_noticia.select_one(selector)
                         if title_elem:
                             titulo_pagina = title_elem.get_text().strip()
+                            titulo_pagina = re.sub(r'^\d{1,2}\s+de\s+\w+\s+de\s+\d{4}\s*', '', titulo_pagina).strip()
+                            titulo_pagina = re.sub(r'\d{1,2}\s+de\s+\w+\s+de\s+\d{4}$', '', titulo_pagina).strip()
                             if len(titulo_pagina) > 10:
                                 titulo = titulo_pagina
                                 break
                 except:
                     pass
+        
+        titulo = re.sub(r'^\d{1,2}\s+de\s+\w+\s+de\s+\d{4}\s*', '', titulo).strip()
+        titulo = re.sub(r'\d{1,2}\s+de\s+\w+\s+de\s+\d{4}$', '', titulo).strip()
         
         return titulo
     
