@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Dict
 from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
+import html
 
 from ..core import settings, get_logger
 
@@ -99,9 +100,11 @@ class RSSService:
         item_description = SubElement(item, "description")
         resumo = noticia.get('resumo', 'Resumo não disponível')
         if resumo == 'Resumo não disponível':
-            item_description.text = f"<![CDATA[{noticia.get('titulo', 'Título não disponível')}]]>"
+            descricao_content = noticia.get('titulo', 'Título não disponível')
         else:
-            item_description.text = f"<![CDATA[{resumo}]]>"
+            descricao_content = resumo
+        
+        item_description.set('_cdata_content', descricao_content)
         
         guid = SubElement(item, "guid")
         guid.text = noticia.get('link', f"noticia-{noticia.get('numero', 0)}")
@@ -119,13 +122,11 @@ class RSSService:
         if noticia.get('data') and noticia['data'] != 'Data não informada':
             pub_date = SubElement(item, "pubDate")
             try:
-                # Converter a data da notícia para formato RFC 2822
                 data_noticia_str = noticia['data']
                 data_formatada = self._converter_data_para_rfc2822(data_noticia_str)
                 pub_date.text = data_formatada
             except Exception as e:
                 logger.warning(f"Erro ao formatar data da notícia '{noticia.get('data')}': {e}")
-                # Fallback para data atual se houver erro
                 pub_date.text = datetime.now().strftime("%a, %d %b %Y %H:%M:%S %z")
     
     def _add_image_enclosure(self, item: Element, noticia: Dict) -> None:
@@ -140,17 +141,33 @@ class RSSService:
     def _format_xml(self, rss: Element) -> str:
         xml_str = tostring(rss, encoding='unicode')
         
+        xml_str = self._process_cdata_sections(xml_str)
+        
         dom = minidom.parseString(xml_str)
         pretty_xml = dom.toprettyxml(indent="  ", encoding=None)
         
         lines = [line for line in pretty_xml.split('\n') if line.strip()]
         return '\n'.join(lines)
     
+    def _process_cdata_sections(self, xml_str: str) -> str:
+        """Processa as seções CDATA para evitar escape de caracteres"""
+        import re
+        
+        pattern = r'<description\s+_cdata_content="([^"]*)"(?:\s*/>|></description>)'
+        
+        def replace_cdata(match):
+            content = match.group(1)
+            content = html.unescape(content)
+            return f'<description><![CDATA[{content}]]></description>'
+        
+        xml_str = re.sub(pattern, replace_cdata, xml_str)
+        
+        xml_str = re.sub(r'\s+_cdata_content="[^"]*"', '', xml_str)
+        
+        return xml_str
+    
     def _converter_data_para_rfc2822(self, data_str: str) -> str:
-        """
-        Converte data no formato brasileiro (ex: "30 de julho de 2025") 
-        para formato RFC 2822 (ex: "Wed, 30 Jul 2025 12:00:00 +0000")
-        """
+     
         try:
             meses = {
                 'janeiro': 'Jan', 'fevereiro': 'Feb', 'março': 'Mar', 'abril': 'Apr',
@@ -160,7 +177,6 @@ class RSSService:
             
             dias_semana = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
             
-            # Parse da data brasileira (ex: "30 de julho de 2025")
             partes = data_str.lower().split()
             if len(partes) >= 5:
                 dia = int(partes[0])
@@ -169,17 +185,14 @@ class RSSService:
                 
                 mes_abrev = meses.get(mes_nome, 'Jan')
                 
-                # Criar objeto datetime para obter o dia da semana
                 data_obj = datetime(ano, list(meses.keys()).index(mes_nome) + 1, dia)
                 dia_semana = dias_semana[data_obj.weekday()]
                 
-                # Formato RFC 2822: "Wed, 30 Jul 2025 12:00:00 +0000"
                 return f"{dia_semana}, {dia:02d} {mes_abrev} {ano} 12:00:00 +0000"
                 
         except Exception as e:
             logger.warning(f"Erro ao converter data '{data_str}' para RFC 2822: {e}")
         
-        # Fallback para data atual se houver erro
         return datetime.now().strftime("%a, %d %b %Y %H:%M:%S %z")
 
 
