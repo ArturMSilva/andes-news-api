@@ -94,7 +94,7 @@ class RSSService:
         item_title.text = noticia.get('titulo', 'Título não disponível')
         
         item_link = SubElement(item, "link")
-        item_link.text = noticia.get('link', '')
+        item_link.text = noticia.get('link', settings.ANDES_BASE_URL + '/sites/noticias')
         
         item_description = SubElement(item, "description")
         resumo = noticia.get('resumo', 'Resumo não disponível')
@@ -119,8 +119,13 @@ class RSSService:
         if noticia.get('data') and noticia['data'] != 'Data não informada':
             pub_date = SubElement(item, "pubDate")
             try:
-                pub_date.text = datetime.now().strftime("%a, %d %b %Y %H:%M:%S %z")
-            except:
+                # Converter a data da notícia para formato RFC 2822
+                data_noticia_str = noticia['data']
+                data_formatada = self._converter_data_para_rfc2822(data_noticia_str)
+                pub_date.text = data_formatada
+            except Exception as e:
+                logger.warning(f"Erro ao formatar data da notícia '{noticia.get('data')}': {e}")
+                # Fallback para data atual se houver erro
                 pub_date.text = datetime.now().strftime("%a, %d %b %Y %H:%M:%S %z")
     
     def _add_image_enclosure(self, item: Element, noticia: Dict) -> None:
@@ -140,6 +145,42 @@ class RSSService:
         
         lines = [line for line in pretty_xml.split('\n') if line.strip()]
         return '\n'.join(lines)
+    
+    def _converter_data_para_rfc2822(self, data_str: str) -> str:
+        """
+        Converte data no formato brasileiro (ex: "30 de julho de 2025") 
+        para formato RFC 2822 (ex: "Wed, 30 Jul 2025 12:00:00 +0000")
+        """
+        try:
+            meses = {
+                'janeiro': 'Jan', 'fevereiro': 'Feb', 'março': 'Mar', 'abril': 'Apr',
+                'maio': 'May', 'junho': 'Jun', 'julho': 'Jul', 'agosto': 'Aug',
+                'setembro': 'Sep', 'outubro': 'Oct', 'novembro': 'Nov', 'dezembro': 'Dec'
+            }
+            
+            dias_semana = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            
+            # Parse da data brasileira (ex: "30 de julho de 2025")
+            partes = data_str.lower().split()
+            if len(partes) >= 5:
+                dia = int(partes[0])
+                mes_nome = partes[2]
+                ano = int(partes[4])
+                
+                mes_abrev = meses.get(mes_nome, 'Jan')
+                
+                # Criar objeto datetime para obter o dia da semana
+                data_obj = datetime(ano, list(meses.keys()).index(mes_nome) + 1, dia)
+                dia_semana = dias_semana[data_obj.weekday()]
+                
+                # Formato RFC 2822: "Wed, 30 Jul 2025 12:00:00 +0000"
+                return f"{dia_semana}, {dia:02d} {mes_abrev} {ano} 12:00:00 +0000"
+                
+        except Exception as e:
+            logger.warning(f"Erro ao converter data '{data_str}' para RFC 2822: {e}")
+        
+        # Fallback para data atual se houver erro
+        return datetime.now().strftime("%a, %d %b %Y %H:%M:%S %z")
 
 
 rss_service = RSSService()
