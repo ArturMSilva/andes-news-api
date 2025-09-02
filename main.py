@@ -6,6 +6,7 @@ from datetime import datetime
 from app import (
     settings, 
     setup_logging, 
+    keep_alive_service,
     info_router, 
     noticias_router, 
     cache_router, 
@@ -35,6 +36,18 @@ app.include_router(info_router)
 app.include_router(noticias_router)
 app.include_router(cache_router)
 app.include_router(rss_router)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Evento executado na inicialização da aplicação"""
+    await keep_alive_service.start()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Evento executado no encerramento da aplicação"""
+    await keep_alive_service.stop()
 
 
 @app.exception_handler(Exception)
