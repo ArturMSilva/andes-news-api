@@ -40,14 +40,29 @@ app.include_router(rss_router)
 
 @app.on_event("startup")
 async def startup_event():
-    """Evento executado na inicialização da aplicação"""
-    await keep_alive_service.start()
+    try:
+        await keep_alive_service.start()
+        from app.core import get_logger
+        logger = get_logger(__name__)
+        logger.info("Keep-alive service iniciado com sucesso durante startup")
+    except Exception as e:
+        from app.core import get_logger
+        logger = get_logger(__name__)
+        logger.error(f"Erro ao iniciar keep-alive service: {str(e)}")
+        pass
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Evento executado no encerramento da aplicação"""
-    await keep_alive_service.stop()
+    try:
+        await keep_alive_service.stop()
+        from app.core import get_logger
+        logger = get_logger(__name__)
+        logger.info("Keep-alive service parado com sucesso durante shutdown")
+    except Exception as e:
+        from app.core import get_logger
+        logger = get_logger(__name__)
+        logger.error(f"Erro ao parar keep-alive service: {str(e)}")
 
 
 @app.exception_handler(Exception)
