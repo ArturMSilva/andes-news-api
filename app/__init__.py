@@ -1,6 +1,7 @@
 from .core import settings, setup_logging, keep_alive_service
 from .routers import info_router, noticias_router, cache_router, rss_router
 from .services import rss_service
+from .filters import news_filter
 
 __all__ = [
     "settings", 
@@ -10,5 +11,6 @@ __all__ = [
     "noticias_router", 
     "cache_router", 
     "rss_router",
-    "rss_service"
+    "rss_service",
+    "news_filter"
 ]
