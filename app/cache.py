@@ -19,31 +19,38 @@ class NewsCache:
         }
         logger.info(f"Cache inicializado: max_size={max_size}, ttl={ttl_seconds}s")
     
-    def _generate_cache_key(self, max_noticias: int) -> str:
+    def _generate_cache_key(self, max_noticias: int, filters: Dict = None) -> str:
         key_data = f"noticias:{max_noticias}"
+        
+        if filters:
+            filter_str = json.dumps(filters, sort_keys=True, ensure_ascii=False)
+            key_data += f":filters:{filter_str}"
+        
         return hashlib.md5(key_data.encode()).hexdigest()
     
-    def get(self, max_noticias: int) -> Optional[Dict[str, Any]]:
+    def get(self, max_noticias: int, filters: Dict = None) -> Optional[Dict[str, Any]]:
         self.stats["total_requests"] += 1
-        cache_key = self._generate_cache_key(max_noticias)
+        cache_key = self._generate_cache_key(max_noticias, filters)
         
         try:
             cached_data = self.cache.get(cache_key)
             if cached_data is not None:
                 self.stats["hits"] += 1
-                logger.info(f"Cache HIT para {max_noticias} notícias")
+                filter_info = " com filtros" if filters else ""
+                logger.info(f"Cache HIT para {max_noticias} notícias{filter_info}")
                 return cached_data
             else:
                 self.stats["misses"] += 1
-                logger.info(f"Cache MISS para {max_noticias} notícias")
+                filter_info = " com filtros" if filters else ""
+                logger.info(f"Cache MISS para {max_noticias} notícias{filter_info}")
                 return None
         except Exception as e:
             logger.error(f"Erro ao acessar cache: {e}")
             self.stats["misses"] += 1
             return None
     
-    def set(self, max_noticias: int, data: Dict[str, Any]) -> None:
-        cache_key = self._generate_cache_key(max_noticias)
+    def set(self, max_noticias: int, data: Dict[str, Any], filters: Dict = None) -> None:
+        cache_key = self._generate_cache_key(max_noticias, filters)
         
         try:
             data_with_cache_info = {
@@ -56,7 +63,8 @@ class NewsCache:
             }
             
             self.cache[cache_key] = data_with_cache_info
-            logger.info(f"Dados armazenados no cache para {max_noticias} notícias")
+            filter_info = " com filtros" if filters else ""
+            logger.info(f"Dados armazenados no cache para {max_noticias} notícias{filter_info}")
             
         except Exception as e:
             logger.error(f"Erro ao armazenar no cache: {e}")
