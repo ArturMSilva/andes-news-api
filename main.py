@@ -80,7 +80,7 @@ async def global_exception_handler(request, exc):
     
     return JSONResponse(
         status_code=500,
-        content=error_response.dict()
+        content=error_response.model_dump()
     )
 
 
