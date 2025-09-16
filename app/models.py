@@ -18,6 +18,14 @@ class NoticiaResponse(BaseModel):
     dados_extraidos: List[str]
     noticias: List[NoticiaModel]
     timestamp: str
+    filtros_aplicados: Optional[Dict] = None
+
+
+class KeywordFilter(BaseModel):
+    incluir: Optional[List[str]] = None
+    excluir: Optional[List[str]] = None
+    titulo_apenas: bool = False
+    caso_sensitivo: bool = False
 
 
 class ErrorResponse(BaseModel):
