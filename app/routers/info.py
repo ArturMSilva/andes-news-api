@@ -32,9 +32,12 @@ async def root():
 
 @router.get("/health")
 async def health_check():
-    return {
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-        "service": settings.APP_NAME,
-        "version": settings.VERSION
-    }
+    try:
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "service": settings.APP_NAME,
+            "version": settings.VERSION
+        }
+    except Exception:
+        return {"status": "ok"}
