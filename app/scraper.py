@@ -191,14 +191,19 @@ class AndesScraper:
         except:
             return False
     
-    def obter_noticias(self, max_noticias: int = 10) -> List[Dict]:
+    def obter_noticias(self, max_noticias: int = 10, apply_filters: bool = None, 
+                      keywords_include: list = None, keywords_exclude: list = None,
+                      titulo_apenas: bool = False, caso_sensitivo: bool = False) -> List[Dict]:
         try:
             logger.info(f"Iniciando scraping de {max_noticias} notícias")
+            
+            if apply_filters or keywords_include or keywords_exclude:
+                from .filters import news_filter
             
             all_unique_links = {}
             page = 0
             
-            while len(all_unique_links) < max_noticias and page < 10:
+            while len(all_unique_links) < max_noticias * 3 and page < 20:
                 url = f"{self.noticias_url}?page={page}" if page > 0 else self.noticias_url
                 logger.info(f"Buscando notícias na página {page}: {url}")
                 
@@ -313,6 +318,19 @@ class AndesScraper:
                     continue
             
             logger.info(f"Scraping concluído. {len(noticias_processadas)} notícias processadas e ordenadas por data")
+            
+            if apply_filters or keywords_include or keywords_exclude:
+                noticias_filtradas = news_filter.filter_news(
+                    noticias_processadas,
+                    keywords_include=keywords_include,
+                    keywords_exclude=keywords_exclude,
+                    titulo_apenas=titulo_apenas,
+                    caso_sensitivo=caso_sensitivo,
+                    use_defaults=apply_filters
+                )
+                logger.info(f"Filtragem aplicada: {len(noticias_filtradas)}/{len(noticias_processadas)} notícias mantidas")
+                return noticias_filtradas
+            
             return noticias_processadas
             
         except Exception as e:
