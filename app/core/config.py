@@ -22,7 +22,9 @@ class Settings:
     # Configurações de filtragem por palavras-chave
     ENABLE_KEYWORD_FILTER: bool = True
     DEFAULT_KEYWORDS_INCLUDE: List[str] = [
-        "educação", "universidade", "ensino", "federal", "servidor público", "ifs", "if", "governo", "aposentadoria", "carreira", "ebtt", "paralisação", "greve",
+        "educação", "universidade", "ensino", "federal",
+        "servidor público", "ifs", "if", "governo",
+        "aposentadoria", "carreira", "ebtt", "paralisação", "greve",
     ]
     DEFAULT_KEYWORDS_EXCLUDE: List[str] = [
         "spam", "publicidade", "anúncio", "propaganda"

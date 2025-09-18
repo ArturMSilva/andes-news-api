@@ -12,7 +12,7 @@ class KeepAliveService:
         self.is_running = False
         self.task: Optional[asyncio.Task] = None
         self.health_url = f"{settings.API_BASE_URL}/health"
-        self.ping_interval = 900 # a cada 15 minutos
+        self.ping_interval = 600 # 10 minutos
         self.ping_count = 0
         
     async def start(self):
