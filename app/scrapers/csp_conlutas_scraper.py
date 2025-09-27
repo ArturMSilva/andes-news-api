@@ -21,6 +21,7 @@ class CSPConlutasScraper(BaseScraper):
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
             'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Charset': 'utf-8'
         })
     
     def get_site_name(self) -> str:
@@ -30,7 +31,8 @@ class CSPConlutasScraper(BaseScraper):
         return soup.find_all('a', href=re.compile(r'/noticias/n/\d+/'))
     
     def _extrair_titulo(self, link) -> str:
-        titulo = self._limpar_texto(link.get_text())
+        titulo_raw = link.get_text().strip()
+        titulo = self._limpar_texto(titulo_raw)
         
         if titulo and len(titulo) > 10:
             return titulo
@@ -194,10 +196,27 @@ class CSPConlutasScraper(BaseScraper):
     def extrair_resumo_e_imagem_noticia(self, url_noticia: str) -> dict:
         try:
             logger.info(f"Extraindo dados da notícia CSP-Conlutas: {url_noticia}")
-            response = requests.get(url_noticia, headers=self.headers, timeout=15)
             
-            response.encoding = 'utf-8'
-            soup_noticia = BeautifulSoup(response.text, 'html.parser')
+            headers_encoding = self.headers.copy()
+            headers_encoding.update({
+                'Accept-Charset': 'utf-8, iso-8859-1;q=0.5',
+                'Cache-Control': 'no-cache'
+            })
+            
+            response = requests.get(url_noticia, headers=headers_encoding, timeout=15)
+            
+            if response.encoding is None or response.encoding.lower() in ['iso-8859-1', 'windows-1252']:
+                response.encoding = 'utf-8'
+            
+            try:
+                content = response.content.decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    content = response.content.decode('latin1')
+                except UnicodeDecodeError:
+                    content = response.text
+                
+            soup_noticia = BeautifulSoup(content, 'html.parser')
             
             resumo = self._extrair_resumo(soup_noticia)
             imagem_url = self._extrair_imagem(soup_noticia)
@@ -218,7 +237,30 @@ class CSPConlutasScraper(BaseScraper):
         if not texto:
             return ""
         
+        texto = str(texto)
+        
         texto = html.unescape(texto)
+        
+        try:
+            if '�' in texto:
+                texto_bytes = texto.encode('latin1')
+                texto = texto_bytes.decode('utf-8', errors='ignore')
+        except (UnicodeDecodeError, UnicodeEncodeError):
+            pass
+        
+        if '�' in texto or any(ord(c) > 255 for c in texto if c):
+            char_map = {
+                'à': 'à', 'á': 'á', 'â': 'â', 'ã': 'ã',
+                'é': 'é', 'ê': 'ê', 'í': 'í', 'ó': 'ó',
+                'ô': 'ô', 'õ': 'õ', 'ú': 'ú', 'ç': 'ç',
+                'À': 'À', 'Á': 'Á', 'É': 'É', 'Í': 'Í',
+                'Ó': 'Ó', 'Ú': 'Ú', 'Ç': 'Ç'
+            }
+            
+            for wrong, correct in char_map.items():
+                texto = texto.replace(wrong, correct)
+            
+            texto = texto.replace('�', '')
         
         texto = re.sub(r'\s+', ' ', texto).strip()
         
