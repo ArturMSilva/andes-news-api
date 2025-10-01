@@ -3,7 +3,6 @@ from .andes_scraper import AndesScraper
 from .csp_conlutas_scraper import CSPConlutasScraper
 from .multi_site_scraper import MultiSiteScraper, multi_site_scraper
 
-# Para manter compatibilidade com o código existente
 from .andes_scraper import AndesScraper as AndesScraper_Legacy
 
 __all__ = [
