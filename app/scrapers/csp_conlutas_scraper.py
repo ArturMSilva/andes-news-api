@@ -27,6 +27,18 @@ class CSPConlutasScraper(BaseScraper):
     def get_site_name(self) -> str:
         return "CSP-Conlutas"
     
+    def _processar_pagina_com_encoding_correto(self, url):
+        response = requests.get(url, headers=self.headers, timeout=15)
+        
+        for encoding in ['cp1252', 'utf-8', 'latin1']:
+            try:
+                content = response.content.decode(encoding)
+                return BeautifulSoup(content, 'html.parser')
+            except UnicodeDecodeError:
+                continue
+        
+        return BeautifulSoup(response.text, 'html.parser')
+    
     def _extrair_links_noticias(self, soup: BeautifulSoup) -> List:
         return soup.find_all('a', href=re.compile(r'/noticias/n/\d+/'))
     
@@ -197,24 +209,15 @@ class CSPConlutasScraper(BaseScraper):
         try:
             logger.info(f"Extraindo dados da notícia CSP-Conlutas: {url_noticia}")
             
-            headers_encoding = self.headers.copy()
-            headers_encoding.update({
-                'Accept-Charset': 'utf-8, iso-8859-1;q=0.5',
-                'Cache-Control': 'no-cache'
-            })
-            
-            response = requests.get(url_noticia, headers=headers_encoding, timeout=15)
-            
-            if response.encoding is None or response.encoding.lower() in ['iso-8859-1', 'windows-1252']:
-                response.encoding = 'utf-8'
+            response = requests.get(url_noticia, headers=self.headers, timeout=15)
             
             try:
-                content = response.content.decode('utf-8')
+                content = response.content.decode('cp1252')
             except UnicodeDecodeError:
                 try:
-                    content = response.content.decode('latin1')
+                    content = response.content.decode('utf-8')
                 except UnicodeDecodeError:
-                    content = response.text
+                    content = response.content.decode('latin1')
                 
             soup_noticia = BeautifulSoup(content, 'html.parser')
             
@@ -238,32 +241,25 @@ class CSPConlutasScraper(BaseScraper):
             return ""
         
         texto = str(texto)
-        
         texto = html.unescape(texto)
         
         try:
-            if '�' in texto:
-                texto_bytes = texto.encode('latin1')
-                texto = texto_bytes.decode('utf-8', errors='ignore')
+            has_high_bytes = any(ord(c) > 127 for c in texto)
+            
+            if has_high_bytes:
+                fixed_texto = texto.encode('latin-1', errors='ignore').decode('cp1252', errors='ignore')
+                
+                original_replacements = texto.count('�')
+                fixed_replacements = fixed_texto.count('�')
+                
+                if fixed_replacements <= original_replacements:
+                    texto = fixed_texto
+                    
         except (UnicodeDecodeError, UnicodeEncodeError):
             pass
         
-        if '�' in texto or any(ord(c) > 255 for c in texto if c):
-            char_map = {
-                'à': 'à', 'á': 'á', 'â': 'â', 'ã': 'ã',
-                'é': 'é', 'ê': 'ê', 'í': 'í', 'ó': 'ó',
-                'ô': 'ô', 'õ': 'õ', 'ú': 'ú', 'ç': 'ç',
-                'À': 'À', 'Á': 'Á', 'É': 'É', 'Í': 'Í',
-                'Ó': 'Ó', 'Ú': 'Ú', 'Ç': 'Ç'
-            }
-            
-            for wrong, correct in char_map.items():
-                texto = texto.replace(wrong, correct)
-            
-            texto = texto.replace('�', '')
-        
+        texto = texto.replace('�', '')
         texto = re.sub(r'\s+', ' ', texto).strip()
-        
         texto = texto.replace('\n', ' ').replace('\r', ' ')
         
         return texto
