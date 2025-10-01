@@ -87,7 +87,6 @@ class MultiSiteScraper:
             raise Exception(f"Erro ao obter notícias: {str(e)}")
     
     def _obter_noticias_site(self, scraper, max_noticias: int, site_nome: str) -> List[Dict]:
-        """Obtém notícias de um site específico"""
         try:
             all_unique_links = {}
             page = 0
