@@ -27,18 +27,6 @@ class CSPConlutasScraper(BaseScraper):
     def get_site_name(self) -> str:
         return "CSP-Conlutas"
     
-    def _processar_pagina_com_encoding_correto(self, url):
-        response = requests.get(url, headers=self.headers, timeout=15)
-        
-        for encoding in ['cp1252', 'utf-8', 'latin1']:
-            try:
-                content = response.content.decode(encoding)
-                return BeautifulSoup(content, 'html.parser')
-            except UnicodeDecodeError:
-                continue
-        
-        return BeautifulSoup(response.text, 'html.parser')
-    
     def _extrair_links_noticias(self, soup: BeautifulSoup) -> List:
         return soup.find_all('a', href=re.compile(r'/noticias/n/\d+/'))
     
@@ -204,62 +192,3 @@ class CSPConlutasScraper(BaseScraper):
                         return candidate_url
         
         return "Imagem não disponível"
-    
-    def extrair_resumo_e_imagem_noticia(self, url_noticia: str) -> dict:
-        try:
-            logger.info(f"Extraindo dados da notícia CSP-Conlutas: {url_noticia}")
-            
-            response = requests.get(url_noticia, headers=self.headers, timeout=15)
-            
-            try:
-                content = response.content.decode('cp1252')
-            except UnicodeDecodeError:
-                try:
-                    content = response.content.decode('utf-8')
-                except UnicodeDecodeError:
-                    content = response.content.decode('latin1')
-                
-            soup_noticia = BeautifulSoup(content, 'html.parser')
-            
-            resumo = self._extrair_resumo(soup_noticia)
-            imagem_url = self._extrair_imagem(soup_noticia)
-            
-            return {
-                'resumo': resumo if resumo else "Resumo não disponível",
-                'imagem': imagem_url if imagem_url else "Imagem não disponível"
-            }
-            
-        except Exception as e:
-            logger.error(f"Erro ao extrair dados da notícia CSP-Conlutas {url_noticia}: {str(e)}")
-            return {
-                'resumo': f"Erro ao extrair resumo: {str(e)}",
-                'imagem': "Imagem não disponível"
-            }
-    
-    def _limpar_texto(self, texto):
-        if not texto:
-            return ""
-        
-        texto = str(texto)
-        texto = html.unescape(texto)
-        
-        try:
-            has_high_bytes = any(ord(c) > 127 for c in texto)
-            
-            if has_high_bytes:
-                fixed_texto = texto.encode('latin-1', errors='ignore').decode('cp1252', errors='ignore')
-                
-                original_replacements = texto.count('�')
-                fixed_replacements = fixed_texto.count('�')
-                
-                if fixed_replacements <= original_replacements:
-                    texto = fixed_texto
-                    
-        except (UnicodeDecodeError, UnicodeEncodeError):
-            pass
-        
-        texto = texto.replace('�', '')
-        texto = re.sub(r'\s+', ' ', texto).strip()
-        texto = texto.replace('\n', ' ').replace('\r', ' ')
-        
-        return texto
