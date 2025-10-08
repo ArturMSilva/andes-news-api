@@ -25,14 +25,13 @@ async def get_rss_feed(
     )
 ):
     try:
-        # Remove parâmetros externos - usa apenas configuração do config.py
-        keywords_include = None  # Será definido pelo filtro baseado no config.py
-        keywords_exclude = None  # Será definido pelo filtro baseado no config.py
+        keywords_include = None
+        keywords_exclude = None
         
         filter_summary = news_filter.get_filter_summary(
             keywords_include=keywords_include,
             keywords_exclude=keywords_exclude,
-            use_defaults=True  # SEMPRE aplica filtros do config.py
+            use_defaults=True
         )
         
         cached_data = news_cache.get(max_noticias, filter_summary)
@@ -43,7 +42,6 @@ async def get_rss_feed(
         else:
             logger.info(f"Cache miss - buscando {max_noticias} notícias para feed RSS com filtros automáticos")
             
-            # SEMPRE aplica filtros (não permite desabilitar)
             noticias = scraper.obter_noticias(
                 max_noticias=max_noticias,
                 apply_filters=True,  
@@ -64,7 +62,7 @@ async def get_rss_feed(
                 "dados_extraidos": ["Título ✓", "Resumo ✓", "Imagem ✓", "Link ✓", "Categoria ✓", "Data ✓"],
                 "noticias": noticias,
                 "timestamp": datetime.now().isoformat(),
-                "filtros_aplicados": filter_summary  # SEMPRE inclui informações sobre filtros
+                "filtros_aplicados": filter_summary
             }
             
             news_cache.set(max_noticias, response_data, filter_summary)

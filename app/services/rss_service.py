@@ -150,7 +150,6 @@ class RSSService:
         return '\n'.join(lines)
     
     def _process_cdata_sections(self, xml_str: str) -> str:
-        """Processa as seções CDATA para evitar escape de caracteres"""
         import re
         
         pattern = r'<description\s+_cdata_content="([^"]*)"(?:\s*/>|></description>)'
