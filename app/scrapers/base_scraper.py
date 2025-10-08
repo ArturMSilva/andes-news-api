@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from datetime import datetime
+import html
 import logging
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,18 @@ class BaseScraper(ABC):
         
         return datetime.min
     
+    def _limpar_texto(self, texto):
+        if not texto:
+            return ""
+        
+        texto = str(texto)
+        texto = html.unescape(texto)
+        texto = texto.replace('�', '')
+        texto = re.sub(r'\s+', ' ', texto).strip()
+        texto = texto.replace('\n', ' ').replace('\r', ' ')
+        
+        return texto
+    
     @abstractmethod
     def _extrair_links_noticias(self, soup: BeautifulSoup) -> List:
         pass
@@ -94,12 +107,26 @@ class BaseScraper(ABC):
     def get_site_name(self) -> str:
         pass
     
+    def _processar_pagina_com_encoding_correto(self, response):
+        encodings = ['utf-8', 'cp1252', 'latin1', 'iso-8859-1']
+        
+        if response.encoding and response.encoding.lower() != 'iso-8859-1':
+            encodings.insert(0, response.encoding)
+        
+        for encoding in encodings:
+            try:
+                content = response.content.decode(encoding)
+                return BeautifulSoup(content, 'html.parser')
+            except UnicodeDecodeError:
+                continue
+        
+        return BeautifulSoup(response.text, 'html.parser')
+
     def extrair_resumo_e_imagem_noticia(self, url_noticia: str) -> Dict[str, str]:
         try:
             logger.info(f"Extraindo dados da notícia: {url_noticia}")
             response = requests.get(url_noticia, headers=self.headers, timeout=15)
-            response.encoding = 'utf-8'
-            soup_noticia = BeautifulSoup(response.text, 'html.parser')
+            soup_noticia = self._processar_pagina_com_encoding_correto(response)
             
             resumo = self._extrair_resumo(soup_noticia)
             imagem_url = self._extrair_imagem(soup_noticia)
