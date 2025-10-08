@@ -26,15 +26,15 @@ class AndesScraper(BaseScraper):
         return soup.find_all('a', href=re.compile(r'/conteudos/noticia/'))
     
     def _extrair_titulo(self, link) -> str:
-        titulo = link.get_text().strip()
+        titulo = self._limpar_texto(link.get_text())
         
         if not titulo or len(titulo) < 10:
             parent = link.parent
             if parent:
-                titulo = parent.get_text().strip()
+                titulo = self._limpar_texto(parent.get_text())
             
             if not titulo and link.get('title'):
-                titulo = link.get('title').strip()
+                titulo = self._limpar_texto(link.get('title'))
             
             if not titulo:
                 href = link.get('href', '')
@@ -59,13 +59,13 @@ class AndesScraper(BaseScraper):
                 url_completa = f"{self.base_url}{href}" if href.startswith('/') else href
                 try:
                     response = requests.get(url_completa, headers=self.headers, timeout=10)
-                    soup_noticia = BeautifulSoup(response.text, 'html.parser')
+                    soup_noticia = self._processar_pagina_com_encoding_correto(response)
                     
                     title_selectors = ['h1', 'h2', '.title', '.headline', 'title']
                     for selector in title_selectors:
                         title_elem = soup_noticia.select_one(selector)
                         if title_elem:
-                            titulo_pagina = title_elem.get_text().strip()
+                            titulo_pagina = self._limpar_texto(title_elem.get_text())
                             titulo_pagina = re.sub(r'^\d{1,2}\s+de\s+\w+\s+de\s+\d{4}\s*', '', titulo_pagina).strip()
                             titulo_pagina = re.sub(r'\d{1,2}\s+de\s+\w+\s+de\s+\d{4}$', '', titulo_pagina).strip()
                             if len(titulo_pagina) > 10:
@@ -153,13 +153,13 @@ class AndesScraper(BaseScraper):
             if content_div:
                 primeiro_p = content_div.find('p')
                 if primeiro_p:
-                    resumo = primeiro_p.get_text().strip()
+                    resumo = self._limpar_texto(primeiro_p.get_text())
                     break
         
         if not resumo:
             paragrafos = soup_noticia.find_all('p')
             for p in paragrafos:
-                texto = p.get_text().strip()
+                texto = self._limpar_texto(p.get_text())
                 if (len(texto) > 50 and 
                     not texto.startswith('O nosso site') and
                     not texto.startswith('Utilizamos cookies') and
