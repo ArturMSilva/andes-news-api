@@ -104,8 +104,7 @@ class MultiSiteScraper:
                 logger.info(f"{site_nome.upper()} - Página {page}: {url}")
                 
                 response = requests.get(url, headers=scraper.headers, timeout=15)
-                response.encoding = 'utf-8'
-                soup = BeautifulSoup(response.text, 'html.parser')
+                soup = scraper._processar_pagina_com_encoding_correto(response)
                 
                 links_noticias = scraper._extrair_links_noticias(soup)
                 
