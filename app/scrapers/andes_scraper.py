@@ -26,6 +26,47 @@ class AndesScraper(BaseScraper):
         return soup.find_all('a', href=re.compile(r'/conteudos/noticia/'))
     
     def _extrair_titulo(self, link) -> str:
+        # PRIORIDADE: Sempre tentar buscar o título na página da notícia primeiro
+        titulo_da_pagina = None
+        href = link.get('href')
+        
+        if href:
+            url_completa = f"{self.base_url}{href}" if href.startswith('/') else href
+            try:
+                response = requests.get(url_completa, headers=self.headers, timeout=10)
+                soup_noticia = self._processar_pagina_com_encoding_correto(response)
+                
+                # Buscar especificamente por H2 primeiro (onde está o título real no ANDES)
+                title_selectors = ['h2', 'h1', '.title', '.headline', 'title']
+                
+                # Títulos genéricos para ignorar
+                titulos_genericos = [
+                    'SINDICATO NACIONAL DOS DOCENTES',
+                    'ANDES',
+                    'ASSOCIAÇÃO NACIONAL DOS DOCENTES'
+                ]
+                
+                for selector in title_selectors:
+                    title_elem = soup_noticia.select_one(selector)
+                    if title_elem:
+                        titulo_pagina = self._limpar_texto(title_elem.get_text())
+                        titulo_pagina = re.sub(r'^\d{1,2}\s+de\s+\w+\s+de\s+\d{4}\s*', '', titulo_pagina).strip()
+                        titulo_pagina = re.sub(r'\d{1,2}\s+de\s+\w+\s+de\s+\d{4}$', '', titulo_pagina).strip()
+                        
+                        # Verificar se não é um título genérico
+                        e_generico = any(gen.upper() in titulo_pagina.upper() for gen in titulos_genericos)
+                        
+                        if len(titulo_pagina) > 10 and not e_generico:
+                            titulo_da_pagina = titulo_pagina
+                            break
+            except:
+                pass
+        
+        # Se conseguiu extrair da página, usar esse título
+        if titulo_da_pagina:
+            return titulo_da_pagina
+        
+        # FALLBACK: Se não conseguiu da página, tentar extrair do link
         titulo = self._limpar_texto(link.get_text())
         
         if not titulo or len(titulo) < 10:
@@ -36,9 +77,9 @@ class AndesScraper(BaseScraper):
             if not titulo and link.get('title'):
                 titulo = self._limpar_texto(link.get('title'))
             
+            # ÚLTIMO RECURSO: Gerar título da URL
             if not titulo:
-                href = link.get('href', '')
-                if '/conteudos/noticia/' in href:
+                if href and '/conteudos/noticia/' in href:
                     slug = href.split('/conteudos/noticia/')[-1]
                     slug = slug.replace('-', ' ').replace('1', '').strip()
                     titulo = slug.title()
@@ -51,30 +92,6 @@ class AndesScraper(BaseScraper):
                 titulo = titulo[len(cat):].strip()
                 break
         
-        titulo = re.sub(r'\d{1,2}\s+de\s+\w+\s+de\s+\d{4}$', '', titulo).strip()
-        
-        if len(titulo) < 10:
-            href = link.get('href')
-            if href:
-                url_completa = f"{self.base_url}{href}" if href.startswith('/') else href
-                try:
-                    response = requests.get(url_completa, headers=self.headers, timeout=10)
-                    soup_noticia = self._processar_pagina_com_encoding_correto(response)
-                    
-                    title_selectors = ['h1', 'h2', '.title', '.headline', 'title']
-                    for selector in title_selectors:
-                        title_elem = soup_noticia.select_one(selector)
-                        if title_elem:
-                            titulo_pagina = self._limpar_texto(title_elem.get_text())
-                            titulo_pagina = re.sub(r'^\d{1,2}\s+de\s+\w+\s+de\s+\d{4}\s*', '', titulo_pagina).strip()
-                            titulo_pagina = re.sub(r'\d{1,2}\s+de\s+\w+\s+de\s+\d{4}$', '', titulo_pagina).strip()
-                            if len(titulo_pagina) > 10:
-                                titulo = titulo_pagina
-                                break
-                except:
-                    pass
-        
-        titulo = re.sub(r'^\d{1,2}\s+de\s+\w+\s+de\s+\d{4}\s*', '', titulo).strip()
         titulo = re.sub(r'\d{1,2}\s+de\s+\w+\s+de\s+\d{4}$', '', titulo).strip()
         
         return titulo
